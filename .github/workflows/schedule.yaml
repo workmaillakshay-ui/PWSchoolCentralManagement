@@ -1,0 +1,46 @@
+name: JotForm → Google Sheets Export
+
+on:
+  schedule:
+    # Runs every day at 03:00 UTC. Edit the cron expression to change frequency.
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}   # allows manual "Run workflow" trigger from the Actions tab
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write Google service account credentials
+        run: echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > service_account.json
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Run JotForm export
+        env:
+          JOTFORM_API_KEY:      ${{ secrets.JOTFORM_API_KEY }}
+          JOTFORM_FORM_ID:      ${{ secrets.JOTFORM_FORM_ID }}
+          JOTFORM_FILTER_VALUE: ${{ secrets.JOTFORM_FILTER_VALUE }}
+          GOOGLE_SPREADSHEET_ID: ${{ secrets.GOOGLE_SPREADSHEET_ID }}
+          GOOGLE_SHEET_NAME:    ${{ secrets.GOOGLE_SHEET_NAME }}
+          GOOGLE_SERVICE_ACCOUNT_FILE: service_account.json
+          # Optional overrides — remove if you're happy with the defaults below
+          JOTFORM_FILTER_QUESTION_ID: "17"
+          CUTOFF_DATE: "2025-04-01"
+        run: python jotform_export.py
+
+      - name: Clean up credentials file
+        if: always()
+        run: rm -f service_account.json

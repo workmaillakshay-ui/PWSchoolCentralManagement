@@ -1,0 +1,4 @@
+requests
+jotform
+google-auth
+google-api-python-client
